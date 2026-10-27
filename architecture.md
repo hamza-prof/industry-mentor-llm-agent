@@ -15,6 +15,7 @@ flowchart LR
         API[FastAPI backend<br/>:8000]
     end
     LLM[(LLM API<br/>DeepSeek / Qwen / OpenAI / Claude / Ollama)]
+    VIS[(Vision model API<br/>Qwen-VL / GPT-4o-mini / Claude / Ollama VL)]
     EMB[(Embedding model<br/>API or local bge-zh)]
 
     Mentor -- upload material, review, edit comments, export --> UI
@@ -22,6 +23,7 @@ flowchart LR
     UI -- REST/JSON --> API
     API -- chat completions --> LLM
     API -- embeddings --> EMB
+    API -- figure images --> VIS
 ```
 
 ---
@@ -49,12 +51,13 @@ flowchart TB
             A5[kb.py]
         end
         subgraph SVC["Domain services · app/"]
-            S1[parsing.py<br/>parse_file]
+            S1[parsing/<br/>parse_file]
             S2[summarize.py<br/>summarize_document]
             S3[review.py<br/>run_review]
             S4[kb.py<br/>add_source / search]
             S5[prompts.py<br/>render / validate]
             S6[export.py<br/>to_docx / to_markdown]
+            S7[figures.py<br/>describe_figures]
         end
         subgraph INFRA["Infrastructure"]
             I1[llm.py<br/>get_chat_model / get_embeddings]
@@ -66,7 +69,7 @@ flowchart TB
     subgraph STORE["Local data · DATA_DIR"]
         D1[(app.db<br/>SQLite)]
         D2[(chroma/<br/>vectors)]
-        D3[(uploads/<br/>original files)]
+        D3[(uploads/<br/>original files + figures/*.png)]
     end
 
     EXT[(LLM + Embedding APIs)]
@@ -78,6 +81,8 @@ flowchart TB
     A3 --> I2
     A4 --> S5
     A5 --> S4
+    S3 --> S7
+    S7 --> I1
     S3 --> S2
     S3 --> S4
     S3 --> S5
@@ -97,12 +102,13 @@ flowchart TB
     click A3 "backend/app/api/comments.py" "Mentor edits comments"
     click A4 "backend/app/api/prompts.py" "Prompt CRUD"
     click A5 "backend/app/api/kb.py" "Knowledge base CRUD"
-    click S1 "backend/app/parsing.py"
+    click S1 "backend/app/parsing/__init__.py"
     click S2 "backend/app/summarize.py"
     click S3 "backend/app/review.py"
     click S4 "backend/app/kb.py"
     click S5 "backend/app/prompts.py"
     click S6 "backend/app/export.py"
+    click S7 "backend/app/figures.py"
     click I1 "backend/app/llm.py"
     click I2 "backend/app/models.py"
     click I3 "backend/app/config.py"
@@ -121,7 +127,7 @@ flowchart TB
 | `prompts.py` | The **only** source of prompt text. Defaults in code, overrides in DB. |
 
 <details>
-<summary>▶ Details: <code>parsing.py</code> — document parser & sectionizer</summary>
+<summary>▶ Details: <code>parsing/</code> — document parser & sectionizer</summary>
 
 ```mermaid
 flowchart LR
@@ -130,11 +136,14 @@ flowchart LR
     X -->|.pdf| P[_parse_pdf<br/>PyMuPDF: blocks + font size + page no.]
     X -->|.txt/.md| T[_parse_text<br/>markdown # or numbered lines]
     X -->|other| E1[[UnsupportedFileType 415]]
-    D & P & T --> B[RawBlocks: text, style, level?, page?]
+    D & P & T --> B[RawBlocks: text, style, level?, page?, image?]
+    D -.->|w:drawing, charts, alt text| IMG
+    P -.->|raster xrefs + vector clusters| IMG
+    IMG[FigureStore.add + attach_captions<br/>filter logos/icons · convert to RGB PNG ≤1600px<br/>attach caption 图/Figure/表 · chart XML → numbers] --> B
     B --> S[build_sections<br/>1. heading styles<br/>2. numbering regex 1 / 1.1 / 一、/ 第X章<br/>3. fallback: chunk ~800 chars into pseudo-sections]
     S --> V{any text?}
     V -->|no| E2[[EmptyDocument / ScannedPdf 422]]
-    V -->|yes| O[ParsedDocument<br/>sections S1..Sn, paragraphs S1.P1..]
+    V -->|yes| O[ParsedDocument<br/>sections S1..Sn, paragraphs S1.P1..<br/>figures = paragraphs kind=figure]
 ```
 </details>
 
@@ -157,7 +166,8 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    Start[run_review review_id] --> Sum[summarize_document]
+    Start[run_review review_id] --> Fig[describe_figures — vision model<br/>cached per image · skipped if VISION_MODEL empty<br/>description merged into figure paragraph text]
+    Fig --> Sum[summarize_document]
     Sum --> FC[format_checks — rule-based, no LLM<br/>heading numbering gaps · missing references section<br/>figure/table captions · empty sections · length limits]
     FC --> Loop{for each section}
     Loop --> Q[build query = heading + first 500 chars]
@@ -212,6 +222,7 @@ erDiagram
         string language "zh|en"
         json parsed "ParsedDocument: sections, paragraphs"
         json warnings
+        json figure_descriptions "cache: sha256+prompt_version → FigureDescription"
         datetime created_at
     }
     REVIEW {
@@ -247,7 +258,7 @@ erDiagram
         string mentor_text
     }
     PROMPT_TEMPLATE {
-        string key PK "summary_map|summary_reduce|section_review|overall_feedback"
+        string key PK "summary_map|summary_reduce|section_review|overall_feedback|figure_describe"
         int active_version
     }
     PROMPT_VERSION {
@@ -284,7 +295,7 @@ erDiagram
 stateDiagram-v2
     [*] --> queued: POST /api/reviews
     queued --> running: background task starts
-    running --> done: all sections reviewed
+    running --> done: all figures + sections reviewed
     running --> partial: ≥1 section failed, others ok
     running --> failed: summary failed / LLM unreachable / all sections failed
     failed --> queued: POST /api/reviews/{id}/retry
@@ -292,7 +303,7 @@ stateDiagram-v2
     done --> [*]
     note right of running
         stage field shows progress:
-        summary → format → section k/n
+        figures k/n → summary → format → section k/n
     end note
 ```
 
@@ -321,7 +332,8 @@ stateDiagram-v2
 |---|---|---|---|
 | POST | `/api/documents` | multipart upload → parse → store | 413 too large · 415 type · 422 empty/scanned/encrypted |
 | GET | `/api/documents` · `/api/documents/{id}` | list / get with parsed sections | 404 |
-| DELETE | `/api/documents/{id}` | delete doc + reviews | 404 |
+| DELETE | `/api/documents/{id}` | delete doc + reviews + figure files | 404 |
+| GET | `/api/documents/{id}/figures/{image_id}` | figure PNG for the viewer | 404 |
 | POST | `/api/reviews` `{document_id}` | create review, start background run | 404 doc · 503 LLM not configured |
 | GET | `/api/reviews/{id}` | status, stage, summary, comments | 404 |
 | POST | `/api/reviews/{id}/retry` | re-run failed parts | 409 if running |
@@ -344,6 +356,7 @@ stateDiagram-v2
 | **Concurrency** | Sections reviewed with bounded concurrency (`asyncio.Semaphore(3)`) to respect rate limits. |
 | **LLM failures** | `max_retries` + timeout in `llm.py`; structured-output parse errors retried once with the error appended; then section marked failed. |
 | **Prompt injection** | Student text in `<document>` tags; system prompt says content inside is data. Output schema enforced in code. |
+| **Images** | Extracted at parse time (no LLM), described at review time by a separate vision model; unsupported formats kept with `analysable=false` so nothing disappears silently. |
 | **Hallucinated anchors** | `anchor_comments` validates every ID/quote against the parsed doc. |
 | **Hallucinated summary** | `not_found` flag per field; `source_ids` validated. |
 | **Reproducibility** | Each review stores the prompt version + model used. |

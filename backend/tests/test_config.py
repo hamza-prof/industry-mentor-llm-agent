@@ -29,3 +29,9 @@ def test_invalid_provider_rejected(monkeypatch):
 def test_llm_configured_needs_api_key():
     assert not Settings(_env_file=None, llm_api_key="").llm_configured
     assert Settings(_env_file=None, llm_api_key="sk-x").llm_configured
+
+
+def test_figure_settings_defaults():
+    s = Settings(_env_file=None)
+    assert s.vision_model == ""
+    assert s.max_figures_per_doc == 40

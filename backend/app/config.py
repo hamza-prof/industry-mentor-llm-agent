@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     output_language: Literal["auto", "zh", "en"] = "auto"
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    vision_model: str = ""  # empty = figures are not analysed by a vision model
+    max_figures_per_doc: int = 40
+
     @property
     def llm_configured(self) -> bool:
         return bool(self.llm_api_key)
