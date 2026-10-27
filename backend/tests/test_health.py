@@ -11,7 +11,7 @@ def client(**overrides) -> TestClient:
 def test_health_reports_llm_not_configured():
     r = client(llm_api_key="").get("/api/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok", "llm_configured": False}
+    assert r.json() == {"status": "ok", "llm_configured": False, "vision_configured": False}
 
 
 def test_health_reports_llm_configured():

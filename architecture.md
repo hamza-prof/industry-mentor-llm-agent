@@ -14,7 +14,7 @@ flowchart LR
         UI[React UI<br/>:5173]
         API[FastAPI backend<br/>:8000]
     end
-    LLM[(LLM API<br/>DeepSeek / Qwen / OpenAI / Claude / Ollama)]
+    LLM[(LLM API<br/>DeepSeek / Qwen / OpenRouter / Groq / OpenAI / Claude / Ollama)]
     VIS[(Vision model API<br/>Qwen-VL / GPT-4o-mini / Claude / Ollama VL)]
     EMB[(Embedding model<br/>API or local bge-zh)]
 
@@ -354,6 +354,7 @@ stateDiagram-v2
 |---|---|
 | **Long-running work** | FastAPI `BackgroundTasks`; UI polls `GET /api/reviews/{id}` every 2 s. `# ponytail: in-process tasks die with the server; move to a job queue if multi-user.` On startup, reviews stuck in `running` are marked `failed` ("server restarted"). |
 | **Concurrency** | Sections reviewed with bounded concurrency (`asyncio.Semaphore(3)`) to respect rate limits. |
+| **Providers** | `llm.py` builds everything: OpenAI-compatible client for `openai_compatible`/`openrouter`/`groq` (preset URLs), `ChatAnthropic` for `anthropic`. Vision model reuses the LLM connection unless `VISION_*` overrides it. |
 | **LLM failures** | `max_retries` + timeout in `llm.py`; structured-output parse errors retried once with the error appended; then section marked failed. |
 | **Prompt injection** | Student text in `<document>` tags; system prompt says content inside is data. Output schema enforced in code. |
 | **Images** | Extracted at parse time (no LLM), described at review time by a separate vision model; unsupported formats kept with `analysable=false` so nothing disappears silently. |
