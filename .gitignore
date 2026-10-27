@@ -8,3 +8,10 @@ node_modules/
 dist/
 *:Zone.Identifier
 graphify-out/
+
+# Planning docs and task brief — kept local, never committed
+docs/
+CLAUDE.md
+flow.md
+Implementation_plan.md
+Progress.md
