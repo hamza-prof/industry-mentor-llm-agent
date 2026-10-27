@@ -154,8 +154,8 @@ flowchart LR
 flowchart LR
     D[ParsedDocument] --> T{tokens ≤ 60% of<br/>LLM_CONTEXT_TOKENS?}
     T -->|yes: stuff| S1[one call: prompt summary_reduce<br/>with full text]
-    T -->|no: map-reduce| M[map: per section<br/>prompt summary_map → SectionNotes]
-    M --> R[reduce: prompt summary_reduce<br/>over all SectionNotes]
+    T -->|no: map-reduce| M[map: per section<br/>prompt summary_map → text notes]
+    M --> R[reduce: prompt summary_reduce<br/>over all notes]
     S1 & R --> SO[with_structured_output → StructuredSummary]
     SO --> V[validate source_ids ⊂ doc paragraph IDs<br/>drop unknown IDs]
 ```

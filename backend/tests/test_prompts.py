@@ -1,20 +1,7 @@
 import pytest
-from sqlmodel import Session, SQLModel, create_engine
 
 from app import prompts
 from app.prompts import DEFAULT_PROMPTS, PromptInvalid, render_messages, validate_template
-
-
-@pytest.fixture
-def session():
-    engine = create_engine("sqlite://")
-    import app.models  # noqa: F401
-
-    SQLModel.metadata.create_all(engine)
-    with Session(engine) as s:
-        prompts.seed_defaults(s)
-        yield s
-
 
 ALL_KEYS = {
     "summary_map",

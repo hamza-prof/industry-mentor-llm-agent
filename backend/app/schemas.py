@@ -61,3 +61,38 @@ class ParsedDocument(BaseModel):
     @property
     def char_count(self) -> int:
         return sum(len(p.text) for p in self._paragraphs() if p.kind != "figure")
+
+
+# ---- structured summary (feature 1) -------------------------------------------
+
+
+class SummaryField(BaseModel):
+    """One summary item. If the material doesn't contain it: text=null, not_found=true."""
+
+    text: str | None = None
+    not_found: bool = False
+    source_ids: list[str] = []  # paragraph labels it is based on, e.g. ["S3.P2"]
+
+
+class OutlineItem(BaseModel):
+    section_id: str  # "S3"
+    heading: str
+    one_line: str = ""  # one-sentence summary of the section
+
+
+class SummaryOutput(BaseModel):
+    """What the model fills in (with_structured_output)."""
+
+    research_problem: SummaryField
+    objectives: SummaryField
+    technical_approach: SummaryField
+    main_conclusions: SummaryField
+    innovations: SummaryField
+    limitations: SummaryField
+    outline: list[OutlineItem] = []
+
+
+class StructuredSummary(SummaryOutput):
+    title: str | None = None
+    doc_type: DocType
+    warnings: list[str] = []
