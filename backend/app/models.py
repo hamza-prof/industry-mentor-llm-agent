@@ -58,6 +58,7 @@ class Review(SQLModel, table=True):
     warnings: list = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
     summary: dict | None = Field(default=None, sa_column=Column(JSON))  # StructuredSummary
     figures_analysed: int = 0
+    overall_feedback: str | None = None  # mentor-editable, from the overall_feedback prompt
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     started_at: datetime | None = None
     finished_at: datetime | None = None

@@ -7,7 +7,7 @@ from sqlmodel import Session
 
 from app import kb
 from app import prompts as prompt_store
-from app.api import ApiError, documents, prompts, reviews
+from app.api import ApiError, comments, documents, prompts, reviews
 from app.api import kb as kb_api
 from app.config import Settings, get_settings
 from app.db import init_db, make_engine
@@ -61,6 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(prompts.router)
     app.include_router(kb_api.router)
     app.include_router(reviews.router)
+    app.include_router(comments.router)
     return app
 
 

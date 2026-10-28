@@ -1,7 +1,9 @@
 from datetime import datetime
-from typing import Annotated
+from pathlib import Path
+from typing import Annotated, Literal
+from urllib.parse import quote
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request, Response
 from pydantic import BaseModel
 from sqlmodel import Session, select
 
@@ -9,10 +11,13 @@ from app import prompts
 from app.api import ApiError
 from app.api.kb import kb_store
 from app.db import get_session
+from app.export import exported, final_text, to_docx, to_markdown
 from app.llm import get_chat_model, get_vision_model
 from app.models import Document, Review, ReviewComment
+from app.review import summary_text
 from app.runner import ReviewModels, run_review
 from app.schemas import Comment, ParsedDocument, StructuredSummary
+from app.summarize import LANGUAGES
 
 router = APIRouter(prefix="/api", tags=["reviews"])
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -21,6 +26,10 @@ ACTIVE = ("queued", "running")
 
 class CreateReview(BaseModel):
     document_id: int
+
+
+class OverallText(BaseModel):
+    text: str
 
 
 class CommentOut(Comment):
@@ -40,6 +49,7 @@ class ReviewOut(BaseModel):
     warnings: list
     summary: StructuredSummary | None = None
     figures_analysed: int
+    overall_feedback: str | None = None
     created_at: datetime
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -145,3 +155,83 @@ def retry_review(review_id: int, request: Request, session: SessionDep, tasks: B
     session.refresh(r)
     _start(request, tasks, r, only or None)
     return _out(session, r)
+
+
+def _finished(session: Session, review_id: int) -> Review:
+    r = _get(session, review_id)
+    if r.status in ACTIVE:
+        raise ApiError(409, "REVIEW_RUNNING", "Wait for the review to finish.")
+    return r
+
+
+@router.post("/reviews/{review_id}/overall", response_model=ReviewOut)
+async def generate_overall(review_id: int, request: Request, session: SessionDep):
+    r = _finished(session, review_id)
+    cs = exported(_comments(session, r))
+    if not cs:
+        raise ApiError(409, "NO_CONFIRMED_COMMENTS", "Accept or edit some comments first.")
+    settings = request.app.state.settings
+    if not settings.llm_configured and request.app.state.review_models is None:
+        raise ApiError(503, "LLM_NOT_CONFIGURED", "Set LLM_API_KEY in backend/.env first.")
+    parsed = ParsedDocument(**session.get(Document, r.document_id).parsed)
+    lang = parsed.language if settings.output_language == "auto" else settings.output_language
+    heading = {sec.id: sec.heading for sec in parsed.sections}  # the student sees headings, not IDs
+    listing = "\n".join(
+        f"- [{c.severity}/{c.category}] {heading.get(c.section_id, 'whole document')}: "
+        f"{final_text(c, lang)}"
+        for c in cs
+    )
+    summary = StructuredSummary(**r.summary) if r.summary else None
+    msgs = prompts.render(
+        session,
+        "overall_feedback",
+        comments=listing,
+        summary=summary_text(summary),
+        doc_type=parsed.doc_type,
+        language=LANGUAGES[lang],
+    )
+    try:
+        reply = await _models(request).chat.ainvoke(msgs)
+    except Exception as e:
+        raise ApiError(502, "LLM_FAILED", f"The model call failed: {e}") from e
+    r.overall_feedback = str(reply.content).strip()
+    session.commit()
+    session.refresh(r)
+    return _out(session, r)
+
+
+@router.put("/reviews/{review_id}/overall", response_model=ReviewOut)
+def save_overall(review_id: int, body: OverallText, session: SessionDep):
+    r = _get(session, review_id)
+    r.overall_feedback = body.text.strip() or None
+    session.commit()
+    session.refresh(r)
+    return _out(session, r)
+
+
+@router.get("/reviews/{review_id}/export")
+def export_review(
+    review_id: int, request: Request, session: SessionDep, format: Literal["md", "docx"] = "md"
+):
+    r = _finished(session, review_id)
+    doc = session.get(Document, r.document_id)
+    parsed = ParsedDocument(**doc.parsed)
+    cs = _comments(session, r)
+    name = f"{Path(doc.filename).stem}-review.{format}"
+    if format == "md":
+        body = to_markdown(r, doc.filename, parsed, cs).encode()
+        media = "text/markdown; charset=utf-8"
+    else:
+        uploads = request.app.state.settings.data_dir / "uploads"
+        original = uploads / doc.stored_name
+        body = to_docx(
+            r,
+            doc.filename,
+            parsed,
+            cs,
+            original=original if original.suffix == ".docx" and original.exists() else None,
+            figures_dir=uploads / Path(doc.stored_name).stem / "figures",
+        )
+        media = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    disposition = f"attachment; filename=\"review.{format}\"; filename*=UTF-8''{quote(name)}"
+    return Response(body, media_type=media, headers={"Content-Disposition": disposition})

@@ -115,7 +115,8 @@ Only comment on real problems; if the section is fine, return no comments. Figur
         system=MENTOR + " You write warm, specific, prioritised feedback.",
         user="""Write the overall feedback paragraph a mentor would send with these comments: \
 3–6 sentences. Start with the main strengths, then the most important issues to fix in \
-priority order, then the next step. Be specific and encouraging.
+priority order, then the next step. Be specific and encouraging. Write plain text (no \
+Markdown, no paragraph labels); refer to parts of the document by their section names.
 
 Document summary:
 {summary}

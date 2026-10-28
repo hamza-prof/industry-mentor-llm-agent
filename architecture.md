@@ -232,6 +232,7 @@ erDiagram
         json summary "StructuredSummary (null until the summary step)"
         json warnings
         int figures_analysed
+        string overall_feedback "mentor-editable"
         json prompt_versions "key → version used"
         string model
         json errors
@@ -340,9 +341,12 @@ stateDiagram-v2
 | POST | `/api/reviews` `{document_id}` | create review, start background run | 404 doc · 503 LLM not configured |
 | GET | `/api/reviews/{id}` | status, stage, summary, comments | 404 |
 | POST | `/api/reviews/{id}/retry` | re-run failed parts | 409 if running |
-| GET | `/api/reviews/{id}/export?format=docx\|md` | final feedback file | 409 if not done/partial |
-| PATCH | `/api/comments/{id}` | status / mentor_text / severity | 404 · 422 |
-| POST | `/api/reviews/{id}/comments` | mentor adds comment | 422 bad paragraph_id |
+| GET | `/api/reviews/{id}/export?format=docx\|md` | final feedback file (accepted + edited + mentor comments) | 409 while running · 422 bad format |
+| POST · PUT | `/api/reviews/{id}/overall` | generate overall feedback from confirmed comments · save mentor's text | 409 none confirmed / running · 502 LLM failed |
+| PATCH | `/api/comments/{id}` | status / mentor_text / severity / category | 404 · 422 (`EMPTY_EDIT`) |
+| POST | `/api/reviews/{id}/comments` | mentor adds comment (paragraph, section or whole document) | 422 `BAD_ANCHOR` · `BAD_QUOTE` |
+| POST | `/api/reviews/{id}/comments/bulk` `{ids, status}` | e.g. accept all high-severity | 422 `UNKNOWN_COMMENTS` |
+| DELETE | `/api/comments/{id}` | delete a mentor comment | 403 for AI/rule comments (reject instead) |
 | GET | `/api/prompts` · PUT `/api/prompts/{key}` · POST `/api/prompts/{key}/reset` | prompt management | 422 invalid template |
 | GET | `/api/prompts/{key}/versions` | history | |
 | POST/GET/DELETE | `/api/kb/sources` | knowledge base | 409 duplicate · 415 · 422 |
