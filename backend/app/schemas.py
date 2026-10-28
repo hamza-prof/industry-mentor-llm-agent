@@ -96,3 +96,73 @@ class StructuredSummary(SummaryOutput):
     title: str | None = None
     doc_type: DocType
     warnings: list[str] = []
+
+
+# ---- review (features 2 + 3) ---------------------------------------------------
+
+Category = Literal[
+    "evidence",
+    "feasibility",
+    "logic",
+    "format",
+    "completeness",
+    "clarity",
+    "innovation",
+    "citation",
+]
+Severity = Literal["high", "medium", "low"]
+SEVERITY_RANK = {"high": 3, "medium": 2, "low": 1}
+
+
+class FigureDescription(BaseModel):
+    """What the vision model sees in one figure."""
+
+    kind: Literal["chart", "diagram", "table_image", "screenshot", "photo", "formula", "other"]
+    summary: str
+    key_data: list[str] = []  # values read off the figure, e.g. "2023: 280 orders"
+    readable: bool = True
+    issues: list[str] = []  # e.g. "y-axis has no unit"; empty if the figure is fine
+
+
+class RawComment(BaseModel):
+    """One problem found by the model in a section."""
+
+    paragraph_id: str | None = None  # label like "S3.P2"; null = about the whole section
+    quote: str | None = None  # exact words from that paragraph
+    category: Category
+    severity: Severity
+    problem: str
+    suggestion: str
+    revision_steps: list[str] = []
+    standard_refs: list[str] = []  # labels like "K2" of the standard excerpts it relies on
+
+
+class SectionReview(BaseModel):
+    comments: list[RawComment] = []
+
+
+class Comment(BaseModel):
+    """A validated comment, ready to save: the anchor points at real text."""
+
+    section_id: str | None = None  # None = about the whole document
+    paragraph_id: str | None = None
+    quote: str | None = None
+    anchored: bool = False
+    category: Category
+    severity: Severity
+    problem: str
+    suggestion: str = ""
+    revision_steps: list[str] = []
+    standard_refs: list[str] = []
+    origin: Literal["ai", "rule", "mentor"] = "ai"
+
+
+class KBHit(BaseModel):
+    """One knowledge-base chunk returned by search."""
+
+    chunk_id: str  # "{source_id}:{n}"
+    source_id: int
+    filename: str
+    category: str
+    text: str
+    score: float

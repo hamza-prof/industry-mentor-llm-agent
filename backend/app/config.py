@@ -39,6 +39,25 @@ class Settings(BaseSettings):
     vision_api_key: str = ""
     max_figures_per_doc: int = 40
 
+    # Sections each doc type must have (format check). Each inner list = alternative keywords.
+    required_sections: dict[str, list[list[str]]] = {
+        "proposal": [
+            ["背景", "background", "introduction", "引言"],
+            ["目标", "objective", "aim", "goal"],
+            ["方案", "approach", "method", "技术路线"],
+            ["可行性", "feasibility"],
+            ["计划", "plan", "schedule", "进度"],
+            ["风险", "risk"],
+        ],
+        "report": [
+            ["背景", "引言", "introduction", "background"],
+            ["方法", "方案", "approach", "method"],
+            ["结果", "成果", "result"],
+            ["结论", "总结", "conclusion"],
+        ],
+        "technical": [],
+    }
+
     @field_validator("vision_provider", mode="before")
     @classmethod
     def _empty_is_none(cls, v):
@@ -47,6 +66,13 @@ class Settings(BaseSettings):
     @property
     def llm_configured(self) -> bool:
         return bool(self.llm_api_key)
+
+    @property
+    def embeddings_configured(self) -> bool:
+        # without its own URL or key the OpenAI-compatible client would call OpenAI with LLM_API_KEY
+        return self.embedding_provider == "huggingface" or bool(
+            self.embedding_base_url or self.embedding_api_key
+        )
 
 
 @lru_cache

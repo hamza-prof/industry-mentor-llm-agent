@@ -53,7 +53,7 @@ flowchart TB
         subgraph SVC["Domain services · app/"]
             S1[parsing/<br/>parse_file]
             S2[summarize.py<br/>summarize_document]
-            S3[review.py<br/>run_review]
+            S3[runner.py<br/>run_review]
             S4[kb.py<br/>add_source / search]
             S5[prompts.py<br/>render / validate]
             S6[export.py<br/>to_docx / to_markdown]
@@ -168,7 +168,7 @@ flowchart LR
 flowchart TB
     Start[run_review review_id] --> Fig[describe_figures — vision model<br/>cached per image · skipped if VISION_MODEL empty<br/>description merged into figure paragraph text]
     Fig --> Sum[summarize_document]
-    Sum --> FC[format_checks — rule-based, no LLM<br/>heading numbering gaps · missing references section<br/>figure/table captions · empty sections · length limits]
+    Sum --> FC[checks.format_checks — rule-based, no LLM<br/>heading numbering gaps · missing references section<br/>figure/table captions · empty sections · length limits]
     FC --> Loop{for each section}
     Loop --> Q[build query = heading + first 500 chars]
     Q --> KB[kb.search query, k per category, filter doc_type]
@@ -210,7 +210,7 @@ flowchart LR
 erDiagram
     DOCUMENT ||--o{ REVIEW : "reviewed by"
     REVIEW ||--o{ REVIEW_COMMENT : contains
-    REVIEW ||--o| SUMMARY : has
+    FIGURE_CACHE }o--o{ DOCUMENT : "describes figures of"
     PROMPT_TEMPLATE ||--o{ PROMPT_VERSION : versions
     KB_SOURCE ||--o{ KB_CHUNK : "chunked into (in Chroma)"
 
@@ -222,23 +222,25 @@ erDiagram
         string language "zh|en"
         json parsed "ParsedDocument: sections, paragraphs"
         json warnings
-        json figure_descriptions "cache: sha256+prompt_version → FigureDescription"
         datetime created_at
     }
     REVIEW {
         int id PK
         int document_id FK
         string status "queued|running|done|partial|failed"
-        string stage "summary|format|sections k/n"
+        string stage "figures|summary|format|sections k/n|done"
+        json summary "StructuredSummary (null until the summary step)"
+        json warnings
+        int figures_analysed
         json prompt_versions "key → version used"
         string model
         json errors
         datetime started_at
         datetime finished_at
     }
-    SUMMARY {
-        int review_id FK
-        json data "StructuredSummary"
+    FIGURE_CACHE {
+        string key PK "image sha256[:32] : figure_describe prompt version"
+        json data "FigureDescription"
     }
     REVIEW_COMMENT {
         int id PK
@@ -276,6 +278,7 @@ erDiagram
         string category "standard|program_requirement|exemplar"
         string doc_type "report|proposal|technical|any"
         int chunk_count
+        string embedding_model "mismatch with EMBEDDING_MODEL → re-index"
     }
     KB_CHUNK {
         string chunk_id PK

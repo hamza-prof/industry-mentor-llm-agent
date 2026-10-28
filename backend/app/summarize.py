@@ -32,7 +32,7 @@ def section_text(section: Section, paragraphs: list[Paragraph] | None = None) ->
     return "\n".join([f"[{section.id}] {section.heading}", *lines])
 
 
-def _chunks(section: Section, budget: int) -> Iterator[list[Paragraph]]:
+def windows(section: Section, budget: int) -> Iterator[list[Paragraph]]:
     # ponytail: a single paragraph over budget is sent whole; split sentences if that happens
     chunk, size = [], 0
     for p in section.paragraphs:
@@ -47,7 +47,7 @@ def _chunks(section: Section, budget: int) -> Iterator[list[Paragraph]]:
 
 
 async def _map(model, session, sections, budget, common, warnings) -> str:
-    jobs = [(s, c) for s in sections for c in _chunks(s, budget)]
+    jobs = [(s, c) for s in sections for c in windows(s, budget)]
     msgs = [
         prompts.render(session, "summary_map", section=section_text(s, c), **common)
         for s, c in jobs

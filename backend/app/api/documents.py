@@ -9,11 +9,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
+from sqlalchemy import delete
 from sqlmodel import Session, select
 
 from app.api import ApiError
 from app.db import get_session
-from app.models import Document
+from app.models import Document, Review, ReviewComment
 from app.parsing import SUPPORTED_EXTENSIONS, ParseError, parse_file
 from app.schemas import DocType, ParsedDocument
 
@@ -75,14 +76,8 @@ async def _read_limited(file: UploadFile, max_bytes: int) -> bytes:
     return bytes(data)
 
 
-@router.post("", status_code=201, response_model=DocumentOut)
-async def upload_document(
-    request: Request,
-    session: SessionDep,
-    file: Annotated[UploadFile, File()],
-    doc_type: Annotated[DocType, Form()],
-):
-    settings = request.app.state.settings
+async def read_upload(file: UploadFile, max_mb: int) -> tuple[str, bytes]:
+    """Safe filename + bytes, or ApiError (415 type, 413 size, 422 empty)."""
     # Browsers may send Windows paths; never trust the client's path.
     filename = PureWindowsPath(PurePosixPath(file.filename or "upload").name).name
     ext = Path(filename).suffix.lower()
@@ -92,10 +87,23 @@ async def upload_document(
             "UNSUPPORTED_FILE_TYPE",
             f"'{ext or filename}' is not supported. Use {', '.join(SUPPORTED_EXTENSIONS)}.",
         )
-    data = await _read_limited(file, settings.max_upload_mb * _CHUNK)
+    data = await _read_limited(file, max_mb * _CHUNK)
     if not data.strip():
         raise ApiError(422, "EMPTY_DOCUMENT", "The file is empty.")
     _check_magic(ext, data[:8192])
+    return filename, data
+
+
+@router.post("", status_code=201, response_model=DocumentOut)
+async def upload_document(
+    request: Request,
+    session: SessionDep,
+    file: Annotated[UploadFile, File()],
+    doc_type: Annotated[DocType, Form()],
+):
+    settings = request.app.state.settings
+    filename, data = await read_upload(file, settings.max_upload_mb)
+    ext = Path(filename).suffix.lower()
 
     sha = hashlib.sha256(data).hexdigest()
     if existing := session.exec(select(Document).where(Document.sha256 == sha)).first():
@@ -164,6 +172,9 @@ def delete_document(doc_id: int, request: Request, session: SessionDep):
     uploads = _uploads(request)
     (uploads / doc.stored_name).unlink(missing_ok=True)
     shutil.rmtree(uploads / Path(doc.stored_name).stem, ignore_errors=True)
+    review_ids = select(Review.id).where(Review.document_id == doc_id)
+    session.execute(delete(ReviewComment).where(ReviewComment.review_id.in_(review_ids)))
+    session.execute(delete(Review).where(Review.document_id == doc_id))
     session.delete(doc)
     session.commit()
     return Response(status_code=204)

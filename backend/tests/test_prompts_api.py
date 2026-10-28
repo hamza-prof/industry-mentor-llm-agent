@@ -49,8 +49,5 @@ def test_activate_version(client):
 
 def test_health_reports_vision(make_client):
     with make_client(llm_api_key="k", vision_model="v") as c:
-        assert c.get("/api/health").json() == {
-            "status": "ok",
-            "llm_configured": True,
-            "vision_configured": True,
-        }
+        body = c.get("/api/health").json()
+        assert body["llm_configured"] is True and body["vision_configured"] is True
