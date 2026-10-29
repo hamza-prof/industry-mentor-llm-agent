@@ -200,6 +200,78 @@ body {
   border-left: 3px solid var(--color-seal);
 }
 
+/* ---- settings: a form sheet, one ruled band per model ------------------------------- */
+
+.settings {
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule);
+}
+.settings-group {
+  display: grid;
+  grid-template-columns: 15rem 1fr;
+  gap: 2rem;
+  margin: 0;
+  padding: 1.75rem 2rem;
+  border: 0;
+  border-bottom: 1px solid var(--color-rule);
+}
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  max-width: 40rem;
+}
+.settings-row {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  align-items: baseline;
+  gap: 1rem;
+}
+.settings-row > label {
+  font-size: 14px;
+  color: var(--color-graphite);
+}
+.settings-row .field:disabled {
+  background: #eef0ed;
+}
+.settings-test {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: 11rem;
+}
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 2rem;
+}
+.test-ok {
+  color: #2f6b3f;
+  font-size: 14px;
+}
+@media (max-width: 1100px) {
+  .settings-group {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+@media (max-width: 760px) {
+  .settings-group,
+  .settings-actions {
+    padding: 1.25rem 1rem;
+  }
+  .settings-row {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+  .settings-test {
+    margin-left: 0;
+  }
+}
+
 /* ---- documents & knowledge base ----------------------------------------------------- */
 
 .tray {

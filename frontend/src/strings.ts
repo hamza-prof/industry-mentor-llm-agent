@@ -3,11 +3,11 @@ import { useSyncExternalStore } from 'react'
 
 const en = {
   appName: 'Mentor Review',
-  nav: { documents: 'Documents', kb: 'Knowledge base', prompts: 'Prompts' },
+  nav: { documents: 'Documents', kb: 'Knowledge base', prompts: 'Prompts', settings: 'Settings' },
   langToggle: '中文',
   notFound: 'Page not found',
   llmMissing:
-    'No language model is set up. Add LLM_API_KEY to backend/.env and restart the server to run reviews.',
+    'No language model is set up. Choose a provider and add its API key in Settings to run reviews.',
   offline: 'The server is not reachable. Start the backend and reload this page.',
   docType: {
     report: 'Practice report',
@@ -152,7 +152,7 @@ const en = {
     intro:
       'Review standards, training-programme requirements and exemplary past work. Reviews check the student’s material against these.',
     notConfigured:
-      'Embeddings are not set up, so the knowledge base is off. Set EMBEDDING_MODEL and EMBEDDING_BASE_URL in backend/.env.',
+      'Embeddings are not set up, so the knowledge base is off. Set them up in Settings.',
     reindexNeeded: 'The embedding model changed. Re-index the sources before the next review.',
     reindex: 'Re-index all sources',
     add: 'Add source',
@@ -180,6 +180,64 @@ const en = {
     search: 'Search',
     noHits: 'Nothing found.',
     distance: 'distance',
+  },
+  settings: {
+    title: 'Settings',
+    intro:
+      'Choose the model the assistant uses and paste its API key here. Keys stay on this computer and are never shown again after saving.',
+    save: 'Save settings',
+    saving: 'Saving…',
+    saved: 'Settings saved.',
+    test: 'Test connection',
+    testing: 'Testing…',
+    ok: 'Connected.',
+    preset: 'Start from',
+    presetNone: 'Choose a service…',
+    provider: 'Provider',
+    baseUrl: 'Address (base URL)',
+    model: 'Model',
+    key: 'API key',
+    defaultUrl: (u: string) => `Leave empty for ${u}`,
+    keyPlaceholder: 'Paste the API key',
+    keySaved: (hint: string) =>
+      hint
+        ? `Saved key ending in ${hint}. Type a new one to replace it.`
+        : 'A key is saved. Type a new one to replace it.',
+    keyNone: 'No key saved.',
+    show: 'Show',
+    hide: 'Hide',
+    removeKey: 'Remove key',
+    removeKeyLabel: (group: string) => `Remove the saved ${group} key`,
+    providers: {
+      openai_compatible: 'OpenAI-compatible (DeepSeek, Qwen, Ollama, OpenAI…)',
+      openrouter: 'OpenRouter',
+      groq: 'Groq',
+      anthropic: 'Anthropic (Claude)',
+      fake: 'Offline test model',
+    } as Record<string, string>,
+    llm: {
+      title: 'Language model',
+      hint: 'Writes the summary, the margin notes and the overall feedback.',
+      name: 'language model',
+    },
+    vision: {
+      title: 'Figures',
+      hint: 'A model that can read images describes charts and diagrams. Leave its model empty to skip figures.',
+      name: 'figures',
+      same: 'Same as the language model',
+      reuseKey: 'Leave empty to use the language model’s key.',
+      modelHint: 'Empty: figures are not analysed.',
+    },
+    embedding: {
+      title: 'Knowledge base',
+      hint: 'Turns standards and exemplars into searchable passages. After changing it, re-index the knowledge base.',
+      name: 'knowledge base',
+      providers: {
+        openai_compatible: 'OpenAI-compatible embeddings API',
+        huggingface: 'Local model on this computer',
+      } as Record<string, string>,
+      reuseKey: 'Leave empty to use the language model’s key.',
+    },
   },
   prompts: {
     title: 'Prompts',
@@ -213,10 +271,10 @@ export type Strings = typeof en
 
 const zh: Strings = {
   appName: '导师批阅',
-  nav: { documents: '学生材料', kb: '知识库', prompts: '提示词' },
+  nav: { documents: '学生材料', kb: '知识库', prompts: '提示词', settings: '设置' },
   langToggle: 'EN',
   notFound: '页面不存在',
-  llmMissing: '尚未配置大模型。请在 backend/.env 中填写 LLM_API_KEY 并重启服务后再进行评审。',
+  llmMissing: '尚未配置大模型。请在“设置”中选择服务并填写 API 密钥后再进行评审。',
   offline: '无法连接服务器。请启动后端后刷新页面。',
   docType: { report: '实践报告', proposal: '开题报告', technical: '技术文档' },
   docs: {
@@ -348,8 +406,7 @@ const zh: Strings = {
   kb: {
     title: '知识库',
     intro: '评审标准、培养方案要求和优秀范例。评审时会对照这些内容检查学生材料。',
-    notConfigured:
-      '尚未配置向量模型，知识库未启用。请在 backend/.env 中设置 EMBEDDING_MODEL 和 EMBEDDING_BASE_URL。',
+    notConfigured: '尚未配置向量模型，知识库未启用。请在“设置”中配置。',
     reindexNeeded: '向量模型已更换。请在下次评审前重建索引。',
     reindex: '重建全部索引',
     add: '添加资料',
@@ -373,6 +430,56 @@ const zh: Strings = {
     search: '检索',
     noHits: '没有找到相关内容。',
     distance: '距离',
+  },
+  settings: {
+    title: '设置',
+    intro: '选择助手使用的模型，并在此填写 API 密钥。密钥只保存在本机，保存后不会再显示。',
+    save: '保存设置',
+    saving: '正在保存…',
+    saved: '设置已保存。',
+    test: '测试连接',
+    testing: '正在测试…',
+    ok: '连接成功。',
+    preset: '快速填写',
+    presetNone: '选择服务…',
+    provider: '服务类型',
+    baseUrl: '接口地址（Base URL）',
+    model: '模型',
+    key: 'API 密钥',
+    defaultUrl: (u: string) => `留空则使用 ${u}`,
+    keyPlaceholder: '粘贴 API 密钥',
+    keySaved: (hint: string) =>
+      hint
+        ? `已保存密钥，末四位 ${hint}。输入新密钥即可替换。`
+        : '已保存密钥。输入新密钥即可替换。',
+    keyNone: '尚未保存密钥。',
+    show: '显示',
+    hide: '隐藏',
+    removeKey: '删除密钥',
+    removeKeyLabel: (group: string) => `删除已保存的${group}密钥`,
+    providers: {
+      openai_compatible: 'OpenAI 兼容接口（DeepSeek、通义千问、Ollama、OpenAI…）',
+      openrouter: 'OpenRouter',
+      groq: 'Groq',
+      anthropic: 'Anthropic（Claude）',
+      fake: '离线测试模型',
+    },
+    llm: { title: '大模型', hint: '用于生成摘要、批注和总体评价。', name: '大模型' },
+    vision: {
+      title: '图表识别',
+      hint: '能看图的模型负责识别图表和示意图。模型留空则不分析图片。',
+      name: '图表识别',
+      same: '与大模型相同',
+      reuseKey: '留空则使用大模型的密钥。',
+      modelHint: '留空：不分析图片。',
+    },
+    embedding: {
+      title: '知识库',
+      hint: '把审核标准和范例转成可检索的段落。更改后请重建知识库索引。',
+      name: '知识库',
+      providers: { openai_compatible: 'OpenAI 兼容向量接口', huggingface: '本机本地模型' },
+      reuseKey: '留空则使用大模型的密钥。',
+    },
   },
   prompts: {
     title: '提示词',

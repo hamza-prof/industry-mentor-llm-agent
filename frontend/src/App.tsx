@@ -1,10 +1,11 @@
-import { NavLink, Route, Routes } from 'react-router-dom'
+import { Link, NavLink, Route, Routes } from 'react-router-dom'
 import { ApiError, NETWORK_ERROR } from './api/client'
 import { useHealth } from './lib'
 import DocumentsPage from './pages/DocumentsPage'
 import KnowledgeBasePage from './pages/KnowledgeBasePage'
 import PromptsPage from './pages/PromptsPage'
 import ReviewPage from './pages/ReviewPage'
+import SettingsPage from './pages/SettingsPage'
 import { setLang, useLang, useT } from './strings'
 
 export function Shell() {
@@ -12,15 +13,13 @@ export function Shell() {
   const lang = useLang()
   const health = useHealth()
   const offline = health.error instanceof ApiError && health.error.code === NETWORK_ERROR
-  const banner = offline
-    ? t.offline
-    : health.data && !health.data.llm_configured
-      ? t.llmMissing
-      : null
+  const llmMissing = !offline && health.data && !health.data.llm_configured
+  const banner = offline ? t.offline : llmMissing ? t.llmMissing : null
   const links = [
     { to: '/', label: t.nav.documents },
     { to: '/kb', label: t.nav.kb },
     { to: '/prompts', label: t.nav.prompts },
+    { to: '/settings', label: t.nav.settings },
   ]
   return (
     <div className="app">
@@ -39,7 +38,12 @@ export function Shell() {
       </header>
       {banner && (
         <p role="status" className="banner">
-          {banner}
+          {banner}{' '}
+          {llmMissing && (
+            <Link to="/settings" className="link-like">
+              {t.nav.settings}
+            </Link>
+          )}
         </p>
       )}
       <Routes>
@@ -47,6 +51,7 @@ export function Shell() {
         <Route path="/documents/:id" element={<ReviewPage />} />
         <Route path="/kb" element={<KnowledgeBasePage />} />
         <Route path="/prompts" element={<PromptsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<p className="page-msg">{t.notFound}</p>} />
       </Routes>
     </div>

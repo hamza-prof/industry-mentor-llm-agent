@@ -148,6 +148,40 @@ export interface Health {
   max_upload_mb?: number
 }
 
+export type Provider = 'openai_compatible' | 'openrouter' | 'groq' | 'anthropic' | 'fake'
+
+/** API keys are never returned: only whether one is saved and its last 4 characters. */
+export interface AppSettings {
+  llm_provider: Provider
+  llm_base_url: string
+  llm_model: string
+  vision_provider: Provider | null
+  vision_base_url: string
+  vision_model: string
+  embedding_provider: 'openai_compatible' | 'huggingface'
+  embedding_base_url: string
+  embedding_model: string
+  llm_api_key_set: boolean
+  llm_api_key_hint: string
+  vision_api_key_set: boolean
+  vision_api_key_hint: string
+  embedding_api_key_set: boolean
+  embedding_api_key_hint: string
+  default_urls: Record<string, string>
+}
+
+/** Omitted = unchanged; an API key of '' removes it. */
+export type SettingsPatch = Partial<
+  Omit<AppSettings, `${string}_set` | `${string}_hint` | 'default_urls' | 'vision_provider'> & {
+    vision_provider: Provider | ''
+    llm_api_key: string
+    vision_api_key: string
+    embedding_api_key: string
+  }
+>
+
+export type TestTarget = 'llm' | 'vision' | 'embeddings'
+
 export interface Prompt {
   key: string
   description: string
@@ -246,6 +280,11 @@ function form(fields: Record<string, string | Blob>): RequestInit {
 
 export const api = {
   health: () => request<Health>('/health'),
+
+  getSettings: () => request<AppSettings>('/settings'),
+  saveSettings: (patch: SettingsPatch) => request<AppSettings>('/settings', json('PUT', patch)),
+  testConnection: (target: TestTarget) =>
+    request<{ ok: boolean }>('/settings/test', json('POST', { target })),
 
   listDocuments: () => request<DocumentSummary[]>('/documents'),
   getDocument: (id: number) => request<DocumentOut>(`/documents/${id}`),
