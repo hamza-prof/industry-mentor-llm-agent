@@ -62,6 +62,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "vision_configured": get_vision_model(s) is not None,
             "kb_configured": s.embeddings_configured,
             "kb_needs_reindex": reindex,
+            "max_upload_mb": s.max_upload_mb,
         }
 
     app.include_router(documents.router)

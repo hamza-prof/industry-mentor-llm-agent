@@ -13,10 +13,10 @@ from app.api.kb import kb_store
 from app.db import get_session
 from app.export import exported, final_text, to_docx, to_markdown
 from app.llm import get_chat_model, get_vision_model
-from app.models import Document, Review, ReviewComment
+from app.models import Document, FigureCache, Review, ReviewComment
 from app.review import summary_text
 from app.runner import ReviewModels, run_review
-from app.schemas import Comment, ParsedDocument, StructuredSummary
+from app.schemas import Comment, FigureDescription, ParsedDocument, StructuredSummary
 from app.summarize import LANGUAGES
 
 router = APIRouter(prefix="/api", tags=["reviews"])
@@ -55,6 +55,7 @@ class ReviewOut(BaseModel):
     finished_at: datetime | None = None
     comment_count: int = 0
     comments: list[CommentOut] | None = None  # only on GET /reviews/{id}
+    figures: dict[str, FigureDescription] | None = None  # image_id → vision description, ditto
 
 
 def _models(request: Request) -> ReviewModels:
@@ -86,6 +87,12 @@ def _out(session: Session, r: Review, with_comments: bool = False) -> ReviewOut:
         para = {pid: i for i, pid in enumerate(parsed.all_paragraph_ids())}
         cs.sort(key=lambda c: (sec.get(c.section_id, -1), para.get(c.paragraph_id, 10**9), c.id))
         out.comments = [CommentOut.model_validate(c, from_attributes=True) for c in cs]
+        version = r.prompt_versions.get("figure_describe")
+        out.figures = {
+            p.figure.image_id: FigureDescription(**hit.data)
+            for p in parsed.figures()
+            if (hit := session.get(FigureCache, f"{p.figure.image_id}:{version}"))
+        }
     return out
 
 

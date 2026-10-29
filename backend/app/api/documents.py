@@ -30,6 +30,12 @@ class DocumentOut(ParsedDocument):
     duplicate: bool = False
 
 
+class LatestReview(BaseModel):
+    id: int
+    status: str
+    stage: str
+
+
 class DocumentSummary(BaseModel):
     id: int
     filename: str
@@ -38,6 +44,7 @@ class DocumentSummary(BaseModel):
     created_at: datetime
     section_count: int
     figure_count: int
+    latest_review: LatestReview | None = None
 
 
 def _out(doc: Document, duplicate: bool = False) -> DocumentOut:
@@ -144,6 +151,9 @@ async def upload_document(
 @router.get("", response_model=list[DocumentSummary])
 def list_documents(session: SessionDep):
     docs = session.exec(select(Document).order_by(Document.created_at.desc())).all()
+    latest: dict[int, Review] = {}
+    for r in session.exec(select(Review).order_by(Review.created_at, Review.id)).all():
+        latest[r.document_id] = r  # later rows overwrite → newest per document
     out = []
     for d in docs:
         parsed = ParsedDocument(**d.parsed)
@@ -156,6 +166,11 @@ def list_documents(session: SessionDep):
                 created_at=d.created_at,
                 section_count=len(parsed.sections),
                 figure_count=parsed.figure_count,
+                latest_review=(
+                    LatestReview(id=r.id, status=r.status, stage=r.stage)
+                    if (r := latest.get(d.id))
+                    else None
+                ),
             )
         )
     return out

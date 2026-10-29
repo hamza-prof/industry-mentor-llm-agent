@@ -8,6 +8,7 @@ def test_health_reports_llm_not_configured(make_client):
         "vision_configured": False,
         "kb_configured": False,
         "kb_needs_reindex": False,
+        "max_upload_mb": 20,
     }
 
 

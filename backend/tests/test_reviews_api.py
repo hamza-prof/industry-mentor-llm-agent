@@ -1,3 +1,5 @@
+import copy
+
 import pytest
 from langchain_core.embeddings import DeterministicFakeEmbedding
 from sqlmodel import Session
@@ -156,3 +158,39 @@ def test_review_uses_kb(app_client, tmp_path):
     rid = app_client.post("/api/reviews", json={"document_id": upload(app_client)}).json()["id"]
     got = app_client.get(f"/api/reviews/{rid}").json()
     assert got["status"] == "done" and not any(w.startswith("KB_") for w in got["warnings"])
+
+
+def test_document_list_shows_latest_review(app_client):
+    doc_id = upload(app_client)
+    [d] = app_client.get("/api/documents").json()
+    assert d["latest_review"] is None
+    rid = app_client.post("/api/reviews", json={"document_id": doc_id}).json()["id"]
+    [d] = app_client.get("/api/documents").json()
+    assert d["latest_review"]["id"] == rid and d["latest_review"]["status"] == "done"
+
+
+def test_review_returns_figure_descriptions_from_cache(app_client):
+    from app.models import FigureCache
+
+    rid = app_client.post("/api/reviews", json={"document_id": upload(app_client)}).json()["id"]
+    with Session(app_client.app.state.engine) as s:
+        version = s.get(Review, rid).prompt_versions["figure_describe"]
+        s.add(FigureCache(key=f"{'a' * 32}:{version}", data={"kind": "chart", "summary": "Bars"}))
+        s.commit()
+    got = app_client.get(f"/api/reviews/{rid}").json()
+    assert got["figures"] == {}  # the document has no figure with that id
+    with Session(app_client.app.state.engine) as s:
+        doc = s.get(Review, rid).document_id
+        from app.models import Document
+
+        d = s.get(Document, doc)
+        parsed = copy.deepcopy(d.parsed)  # in-place edits of the JSON are not detected
+        fig = {"image_id": "a" * 32, "source": "embedded", "caption": "Fig 1"}
+        parsed["sections"][0]["paragraphs"].append(
+            {"id": "S1.P9", "text": "[Figure] Fig 1", "kind": "figure", "figure": fig}
+        )
+        d.parsed = parsed
+        s.add(d)
+        s.commit()
+    got = app_client.get(f"/api/reviews/{rid}").json()
+    assert got["figures"]["a" * 32]["summary"] == "Bars"
