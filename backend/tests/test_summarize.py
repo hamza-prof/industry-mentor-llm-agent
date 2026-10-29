@@ -26,7 +26,7 @@ class FakeLLM:
     """Stands in for a chat model: `ainvoke` → map notes, `with_structured_output` → summary."""
 
     def __init__(self, summary=None, notes=lambda msgs: "notes [S1.P1]", fail=lambda msgs: False):
-        self.summary = summary or output()
+        self.summary = output() if summary is None else summary
         self.notes, self.fail = notes, fail
         self.calls: list[tuple[str, list]] = []
         self.active = self.max_active = 0
@@ -46,6 +46,8 @@ class FakeLLM:
 
         async def run(msgs):
             self.calls.append(("reduce", msgs))
+            if isinstance(self.summary, list):  # a sequence of replies, one per call
+                return self.summary.pop(0)
             return self.summary
 
         return RunnableLambda(run)
@@ -178,6 +180,19 @@ def test_all_map_calls_failing_raises(session):
     llm = FakeLLM(fail=lambda msgs: True)
     with pytest.raises(RuntimeError, match="model down"):
         run(doc([LONG] * 6, [LONG] * 6), session, llm, llm_context_tokens=1000)
+
+
+def test_empty_structured_summary_is_retried_once(session):
+    llm = FakeLLM(summary=[None, output()])
+    s = run(doc(["one"]), session, llm)
+    assert llm.kinds() == ["reduce", "reduce"]
+    assert s.research_problem.text == "research_problem text"
+
+
+def test_empty_structured_summary_twice_raises_a_clear_error(session):
+    llm = FakeLLM(summary=[None, None])
+    with pytest.raises(ValueError, match="no structured summary"):
+        run(doc(["one"]), session, llm)
 
 
 def test_very_short_doc_warns(session):

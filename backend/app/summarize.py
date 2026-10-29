@@ -114,7 +114,8 @@ async def summarize_document(
         document = await _map(model, session, sections, budget, common, warnings)
 
     structured = model.with_structured_output(SummaryOutput, method=settings.llm_structured_method)
-    out = await structured.ainvoke(
-        prompts.render(session, "summary_reduce", document=document, **common)
-    )
-    return _clean(out, parsed, warnings)
+    msgs = prompts.render(session, "summary_reduce", document=document, **common)
+    for _ in range(2):  # models sometimes skip the tool call; one more try, like review
+        if (out := await structured.ainvoke(msgs)) is not None:
+            return _clean(out, parsed, warnings)
+    raise ValueError("the model returned no structured summary")
