@@ -33,7 +33,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph FE["Frontend · React + Vite + TS"]
-        P1[UploadPage]:::fe
+        P1[DocumentsPage]:::fe
         P2[ReviewPage]:::fe
         P3[PromptsPage]:::fe
         P4[KnowledgeBasePage]:::fe
@@ -112,7 +112,7 @@ flowchart TB
     click I1 "backend/app/llm.py"
     click I2 "backend/app/models.py"
     click I3 "backend/app/config.py"
-    click P1 "frontend/src/pages/UploadPage.tsx"
+    click P1 "frontend/src/pages/DocumentsPage.tsx"
     click P2 "frontend/src/pages/ReviewPage.tsx"
     click P3 "frontend/src/pages/PromptsPage.tsx"
     click P4 "frontend/src/pages/KnowledgeBasePage.tsx"
