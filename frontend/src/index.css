@@ -1,1 +1,675 @@
 @import 'tailwindcss';
+
+/* A marking desk: the student's work is a typeset sheet on a sage blotter; the mentor's marks
+   are inks. Vermilion (朱砂) is the seal and the "must fix" ink, ochre is "should fix",
+   graphite is "minor". Nothing is decorative: every colour says something about a note. */
+@theme {
+  --color-desk: #e3e6e1;
+  --color-paper: #fcfcfa;
+  --color-ink: #1d2b36;
+  --color-graphite: #5f6a73;
+  --color-rule: #c9cec8;
+  --color-seal: #b8322a;
+  --color-ochre: #9a6210;
+  --color-highlight: #f3e2ad;
+
+  --font-sans: 'Source Sans 3 Variable', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', system-ui, sans-serif;
+  --font-serif: 'Source Serif 4 Variable', 'Songti SC', 'STSong', 'SimSun', 'Noto Serif CJK SC', serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+:root {
+  --sev-high: var(--color-seal);
+  --sev-medium: var(--color-ochre);
+  --sev-low: var(--color-graphite);
+  --topbar: 3.25rem;
+}
+
+html {
+  background: var(--color-desk);
+}
+body {
+  margin: 0;
+  background: var(--color-desk);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+[data-severity='high'] {
+  --sev: var(--sev-high);
+}
+[data-severity='medium'] {
+  --sev: var(--sev-medium);
+}
+[data-severity='low'] {
+  --sev: var(--sev-low);
+}
+
+/* ---- chrome ------------------------------------------------------------------------- */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  height: var(--topbar);
+  padding: 0 1.5rem;
+  background: var(--color-desk);
+  border-bottom: 1px solid var(--color-rule);
+}
+.brand {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.navlink {
+  padding: 0.35rem 0.6rem;
+  color: var(--color-graphite);
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+}
+.navlink:hover {
+  color: var(--color-ink);
+}
+.navlink.active {
+  color: var(--color-ink);
+  border-bottom-color: var(--color-ink);
+}
+.lang {
+  margin-left: auto;
+  color: var(--color-graphite);
+  padding: 0.25rem 0.5rem;
+}
+.lang:hover {
+  color: var(--color-ink);
+}
+.banner {
+  margin: 0;
+  padding: 0.6rem 1.5rem;
+  background: #efe3c6;
+  border-bottom: 1px solid #d8c393;
+}
+.banner-inline {
+  padding: 0.6rem 0.9rem;
+  background: #efe3c6;
+  border-left: 3px solid var(--color-ochre);
+}
+
+.page {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem 4rem;
+}
+.page-title {
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.lede {
+  margin-top: 0.5rem;
+  max-width: 62ch;
+  color: var(--color-graphite);
+}
+.section-title {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+}
+.page-msg {
+  padding: 2.5rem 1.5rem;
+}
+
+/* ---- controls ----------------------------------------------------------------------- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--color-ink);
+  background: var(--color-paper);
+  border: 1px solid #9aa39f;
+  border-radius: 2px;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--color-ink);
+}
+.btn-ink {
+  color: var(--color-paper);
+  background: var(--color-ink);
+  border-color: var(--color-ink);
+}
+.btn-ink:hover:not(:disabled) {
+  background: #2c3e4b;
+}
+.btn:disabled,
+.btn-quiet:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.btn-quiet {
+  color: var(--color-graphite);
+  cursor: pointer;
+}
+.btn-quiet:hover {
+  color: var(--color-seal);
+  text-decoration: underline;
+}
+.link-like {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.field {
+  padding: 0.35rem 0.5rem;
+  background: #fff;
+  border: 1px solid #b6bdb8;
+  border-radius: 2px;
+  font: inherit;
+}
+.field:focus {
+  outline: 2px solid var(--color-ink);
+  outline-offset: -1px;
+}
+.code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.alert {
+  padding-left: 0.75rem;
+  color: var(--color-seal);
+  border-left: 3px solid var(--color-seal);
+}
+
+/* ---- documents & knowledge base ----------------------------------------------------- */
+
+.tray {
+  margin-top: 1.75rem;
+  padding: 1.5rem 1.75rem;
+  background: var(--color-paper);
+  border: 1.5px dashed #a3aba6;
+}
+.tray[data-over] {
+  border-color: var(--color-ink);
+  background: #fff;
+}
+.tray[data-busy] {
+  border-style: solid;
+}
+
+.ledger {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ledger th {
+  padding: 0.4rem 0.75rem 0.4rem 0;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-graphite);
+  border-bottom: 1px solid var(--color-ink);
+}
+.ledger td {
+  padding: 0.65rem 0.75rem 0.65rem 0;
+  border-bottom: 1px solid var(--color-rule);
+  vertical-align: baseline;
+}
+.ledger .num {
+  padding-right: 1.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.file-link {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+.file-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.status-dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  flex: none;
+  transform: translateY(-1px);
+}
+.status-done {
+  background: var(--color-ink);
+}
+.status-partial {
+  background: var(--color-ochre);
+}
+.status-failed {
+  background: var(--color-seal);
+}
+.status-queued,
+.status-running {
+  border: 1.5px solid var(--color-ochre);
+}
+
+.hit {
+  padding-left: 0.9rem;
+  border-left: 2px solid var(--color-rule);
+}
+
+/* ---- prompts ------------------------------------------------------------------------ */
+
+.prompt-layout {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: 2.5rem;
+}
+.prompt-tab {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+.prompt-tab:hover {
+  border-left-color: var(--color-rule);
+}
+.prompt-tab[aria-current] {
+  background: var(--color-paper);
+  border-left-color: var(--color-ink);
+}
+.chip {
+  padding: 0.05rem 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  border: 1px dashed #a3aba6;
+  color: var(--color-graphite);
+}
+.chip[data-present='true'] {
+  border-style: solid;
+  border-color: var(--color-ink);
+  color: var(--color-ink);
+}
+.chip[data-required='true'][data-present='false'] {
+  border-style: solid;
+  border-color: var(--color-seal);
+  color: var(--color-seal);
+}
+
+/* ---- review workspace --------------------------------------------------------------- */
+
+.workspace {
+  display: grid;
+  grid-template-columns: 17rem minmax(0, 1fr) 23rem;
+  height: calc(100vh - var(--topbar));
+}
+.pane {
+  overflow-y: auto;
+  padding: 1.25rem;
+}
+.pane-left {
+  border-right: 1px solid var(--color-rule);
+}
+.pane-right {
+  border-left: 1px solid var(--color-rule);
+}
+.pane-center {
+  padding: 2rem 2.5rem 6rem;
+}
+.pane-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.group-title {
+  padding-bottom: 0.25rem;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-rule);
+}
+.back-link {
+  color: var(--color-graphite);
+  font-size: 14px;
+}
+.back-link:hover {
+  color: var(--color-ink);
+}
+.outline-link {
+  text-align: left;
+  font-family: var(--font-serif);
+  cursor: pointer;
+}
+.outline-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.pid-link {
+  margin-left: 0.35rem;
+  font-size: 11.5px;
+  color: var(--color-graphite);
+  text-decoration: underline dotted;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.progress {
+  height: 4px;
+  background: var(--color-rule);
+}
+.progress > div {
+  height: 100%;
+  background: var(--color-ink);
+  transition: width 0.4s ease;
+}
+
+/* The student's sheet. */
+.paper {
+  position: relative;
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 4.5rem 5rem 5rem;
+  background: var(--color-paper);
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.8;
+  box-shadow:
+    0 1px 1px rgb(29 43 54 / 0.08),
+    0 12px 28px -18px rgb(29 43 54 / 0.35);
+}
+.doc-title {
+  margin-bottom: 2.5rem;
+  text-align: center;
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.doc-heading {
+  position: relative;
+  margin: 2.2em 0 0.8em;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.45;
+  scroll-margin: 6rem;
+}
+h3.doc-heading {
+  font-size: 17px;
+}
+.para {
+  position: relative;
+  margin: 0 0 0.9em;
+  scroll-margin: 6rem;
+  transition: background-color 0.25s;
+}
+.para-list {
+  padding-left: 1.2em;
+}
+/* The mentor's ink in the left margin: the most serious open note on this paragraph. */
+.para[data-severity]::before,
+.doc-heading[data-severity]::before {
+  content: '';
+  position: absolute;
+  left: -1.6rem;
+  top: 0.35em;
+  bottom: 0.35em;
+  width: 3px;
+  background: var(--sev);
+}
+.para[data-active],
+.doc-heading[data-active] {
+  background: #f1f3ee;
+  box-shadow: 0 0 0 0.4rem #f1f3ee;
+}
+.para mark {
+  background: var(--color-highlight);
+  color: inherit;
+  padding: 0 1px;
+}
+.pid {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--color-graphite);
+  font-variant-numeric: tabular-nums;
+}
+.para > .pid {
+  position: absolute;
+  top: 0.45em;
+  right: -3.75rem;
+  opacity: 0.55;
+  line-height: 1;
+}
+.para[data-active] > .pid {
+  opacity: 1;
+}
+figure.para {
+  margin: 1.5em 0;
+  text-align: center;
+}
+.figure-btn {
+  display: block;
+  margin: 0 auto;
+  cursor: zoom-in;
+}
+.figure-btn img {
+  max-height: 22rem;
+  max-width: 100%;
+  border: 1px solid var(--color-rule);
+}
+figcaption {
+  margin-top: 0.5rem;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  color: var(--color-graphite);
+}
+.badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0 0.4rem;
+  font-size: 12px;
+  color: var(--color-ochre);
+  border: 1px solid var(--color-ochre);
+}
+.chart-table {
+  margin: 0.5rem auto;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  border-collapse: collapse;
+}
+.chart-table th,
+.chart-table td {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--color-rule);
+}
+.chart-table th {
+  text-align: left;
+  font-weight: 500;
+}
+.chart-table td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Margin notes: slips of paper with the severity ink down the left edge. */
+.note {
+  position: relative;
+  padding: 0.65rem 0.85rem 0.75rem;
+  background: var(--color-paper);
+  border-left: 3px solid var(--sev, var(--color-rule));
+  cursor: pointer;
+  scroll-margin: 1rem;
+}
+.note[data-active] {
+  outline: 1px solid var(--color-ink);
+}
+.note[data-status='rejected'] {
+  background: transparent;
+  border-left-color: var(--color-rule);
+}
+.sev-label {
+  color: var(--sev);
+  font-weight: 600;
+}
+.quote {
+  margin-top: 0.4rem;
+  padding-left: 0.6rem;
+  font-family: var(--font-serif);
+  color: var(--color-graphite);
+  border-left: 2px solid var(--color-highlight);
+}
+.steps {
+  margin-top: 0.15rem;
+  padding-left: 1.25rem;
+  list-style: decimal;
+}
+
+/* The one loud thing: the mentor's seal, pressed when a note is confirmed. */
+.seal-slot {
+  position: absolute;
+  top: 0.45rem;
+  right: 0.6rem;
+}
+.note:has(.seal-slot) > header {
+  padding-right: 2.75rem;
+}
+.seal {
+  display: inline-grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  font-weight: 700;
+  line-height: 1.05;
+  writing-mode: vertical-rl;
+  letter-spacing: 0.05em;
+  color: var(--color-seal);
+  background: rgb(184 50 42 / 0.05);
+  border: 2px solid var(--color-seal);
+  box-shadow:
+    inset 0 0 0 1.5px var(--color-paper),
+    inset 0 0 0 2.5px var(--color-seal);
+  transform: rotate(-8deg);
+  mix-blend-mode: multiply;
+}
+.seal-fresh {
+  animation: stamp 0.22s cubic-bezier(0.2, 0.9, 0.3, 1.25);
+}
+@keyframes stamp {
+  from {
+    opacity: 0;
+    transform: scale(1.7) rotate(-15deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(-8deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seal-fresh,
+  .progress > div,
+  .para {
+    animation: none;
+    transition: none;
+  }
+}
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(29 43 54 / 0.55);
+}
+.lightbox {
+  width: min(56rem, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  padding: 1.5rem 1.75rem;
+  background: var(--color-paper);
+}
+
+/* ---- narrow screens: panes stack, the sheet loses its wide margins ------------------ */
+
+@media (max-width: 1100px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) 21rem;
+  }
+  .pane-left {
+    display: none;
+  }
+}
+@media (max-width: 760px) {
+  .topbar {
+    gap: 1rem;
+    padding: 0 1rem;
+  }
+  .brand {
+    display: none;
+  }
+  .page {
+    padding: 1.5rem 1rem 3rem;
+  }
+  .workspace {
+    display: block;
+    height: auto;
+  }
+  .pane {
+    overflow: visible;
+  }
+  .pane-left {
+    display: block;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-rule);
+  }
+  .pane-right {
+    border-left: 0;
+  }
+  .pane-center {
+    padding: 1rem;
+  }
+  .paper {
+    padding: 2rem 1.25rem 2.5rem;
+    font-size: 16px;
+  }
+  .para[data-severity]::before,
+  .doc-heading[data-severity]::before {
+    left: -0.7rem;
+  }
+  .para > .pid {
+    display: none;
+  }
+  .prompt-layout {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .ledger th:nth-child(n + 3):nth-child(-n + 4),
+  .ledger td:nth-child(n + 3):nth-child(-n + 4),
+  .ledger th:nth-child(6),
+  .ledger td:nth-child(6) {
+    display: none;
+  }
+}
+.note:has(.seal-slot) > .quote:first-of-type {
+  margin-right: 2.4rem;
+}
