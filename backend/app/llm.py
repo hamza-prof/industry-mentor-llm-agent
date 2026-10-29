@@ -139,7 +139,7 @@ def get_chat_model(s: Settings) -> BaseChatModel:
     if s.llm_provider == "fake":
         return FakeChatModel()  # type: ignore[return-value]
     if not s.llm_configured:
-        raise LLMNotConfigured("Set LLM_API_KEY (and LLM_MODEL) in backend/.env")
+        raise LLMNotConfigured("Add a language model and API key on the Settings page")
     return _build(s.llm_provider, s.llm_model, s.llm_api_key, s.llm_base_url, s.llm_temperature, s)
 
 

@@ -40,8 +40,7 @@ def _store(request: Request):
         raise ApiError(
             503,
             "KB_NOT_CONFIGURED",
-            "Set EMBEDDING_MODEL and EMBEDDING_BASE_URL (or EMBEDDING_API_KEY) in backend/.env "
-            "to use the knowledge base.",
+            "Set up knowledge-base embeddings on the Settings page to use the knowledge base.",
         )
     return store
 

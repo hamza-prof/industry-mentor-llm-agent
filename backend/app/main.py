@@ -10,7 +10,8 @@ from app import kb
 from app import prompts as prompt_store
 from app.api import ApiError, comments, documents, prompts, reviews
 from app.api import kb as kb_api
-from app.config import Settings, get_settings
+from app.api import settings as settings_api
+from app.config import Settings, apply_saved, get_settings
 from app.db import init_db, make_engine
 from app.llm import get_vision_model
 from app.runner import recover_stuck
@@ -23,7 +24,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s %(message)s"))
         app_log.addHandler(handler)
         app_log.setLevel(logging.INFO)
-    settings = settings or get_settings()
+    settings = apply_saved(settings or get_settings())  # Settings page values win over .env
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -70,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(kb_api.router)
     app.include_router(reviews.router)
     app.include_router(comments.router)
+    app.include_router(settings_api.router)
     return app
 
 

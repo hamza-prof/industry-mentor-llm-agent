@@ -109,7 +109,11 @@ def create_review(
     if session.get(Document, body.document_id) is None:
         raise ApiError(404, "NOT_FOUND", f"Document {body.document_id} not found.")
     if not settings.llm_configured and request.app.state.review_models is None:
-        raise ApiError(503, "LLM_NOT_CONFIGURED", "Set LLM_API_KEY in backend/.env first.")
+        raise ApiError(
+            503,
+            "LLM_NOT_CONFIGURED",
+            "Add a language model and API key on the Settings page first.",
+        )
     q = select(Review).where(Review.document_id == body.document_id, Review.status.in_(ACTIVE))
     if running := session.exec(q).first():
         raise ApiError(
@@ -179,7 +183,11 @@ async def generate_overall(review_id: int, request: Request, session: SessionDep
         raise ApiError(409, "NO_CONFIRMED_COMMENTS", "Accept or edit some comments first.")
     settings = request.app.state.settings
     if not settings.llm_configured and request.app.state.review_models is None:
-        raise ApiError(503, "LLM_NOT_CONFIGURED", "Set LLM_API_KEY in backend/.env first.")
+        raise ApiError(
+            503,
+            "LLM_NOT_CONFIGURED",
+            "Add a language model and API key on the Settings page first.",
+        )
     parsed = ParsedDocument(**session.get(Document, r.document_id).parsed)
     lang = parsed.language if settings.output_language == "auto" else settings.output_language
     heading = {sec.id: sec.heading for sec in parsed.sections}  # the student sees headings, not IDs
