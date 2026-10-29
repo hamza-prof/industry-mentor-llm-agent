@@ -141,3 +141,56 @@ def test_live_vision_describes_a_chart():
         pytest.skip("VISION_MODEL not set")
     reply = model.invoke([image_message(make_png(300, 200), "What colours do you see?")])
     assert reply.content.strip()
+
+
+def test_fake_provider_needs_no_key_and_answers_deterministically():
+    import asyncio
+
+    from langchain_core.messages import HumanMessage, SystemMessage
+
+    from app.schemas import SectionReview, SummaryOutput
+
+    s = Settings(_env_file=None, llm_provider="fake")
+    assert s.llm_configured and get_vision_model(s) is None
+    model = get_chat_model(s)
+    msgs = [
+        SystemMessage("Labels look like [S3.P2]."),
+        HumanMessage(
+            "<document>\n[S2] 2 Results\n[S2.P1] Users are much happier now.\n</document>"
+        ),
+    ]
+    review = asyncio.run(model.with_structured_output(SectionReview).ainvoke(msgs))
+    [c] = review.comments
+    assert c.paragraph_id == "S2.P1" and c.quote in "Users are much happier now."
+    summary = asyncio.run(model.with_structured_output(SummaryOutput).ainvoke(msgs))
+    assert summary.research_problem.source_ids == ["S2.P1"]
+    assert asyncio.run(model.ainvoke(msgs)).text
+
+
+def test_each_llm_call_logs_model_tokens_and_time_but_no_text(caplog):
+    import logging
+    import uuid
+
+    from langchain_core.messages import AIMessage
+    from langchain_core.outputs import ChatGeneration, LLMResult
+
+    from app.llm import UsageLog
+
+    log, run = UsageLog(), uuid.uuid4()
+    caplog.set_level(logging.INFO, logger="app.llm")
+    log.on_chat_model_start({"kwargs": {"model_name": "deepseek-chat"}}, [[]], run_id=run)
+    msg = AIMessage(
+        "STUDENT SECRET TEXT",
+        usage_metadata={"input_tokens": 120, "output_tokens": 30, "total_tokens": 150},
+    )
+    log.on_llm_end(LLMResult(generations=[[ChatGeneration(message=msg)]]), run_id=run)
+    [line] = caplog.messages
+    assert "deepseek-chat" in line and "in=120" in line and "out=30" in line and "ms=" in line
+    assert "SECRET" not in line
+
+
+def test_built_models_carry_the_usage_logger():
+    from app.llm import UsageLog
+
+    model = get_chat_model(Settings(_env_file=None, llm_api_key="k"))
+    assert any(isinstance(cb, UsageLog) for cb in model.callbacks)

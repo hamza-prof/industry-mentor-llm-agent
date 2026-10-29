@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -16,6 +17,12 @@ from app.runner import recover_stuck
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
+    app_log = logging.getLogger("app")  # LLM usage lines; uvicorn only configures its own loggers
+    if not app_log.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s %(message)s"))
+        app_log.addHandler(handler)
+        app_log.setLevel(logging.INFO)
     settings = settings or get_settings()
 
     @asynccontextmanager

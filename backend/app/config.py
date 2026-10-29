@@ -5,7 +5,9 @@ from typing import Literal
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-Provider = Literal["openai_compatible", "openrouter", "groq", "anthropic"]
+Provider = Literal[
+    "openai_compatible", "openrouter", "groq", "anthropic", "fake"
+]  # fake: E2E tests
 
 
 class Settings(BaseSettings):
@@ -65,7 +67,7 @@ class Settings(BaseSettings):
 
     @property
     def llm_configured(self) -> bool:
-        return bool(self.llm_api_key)
+        return self.llm_provider == "fake" or bool(self.llm_api_key)
 
     @property
     def embeddings_configured(self) -> bool:
