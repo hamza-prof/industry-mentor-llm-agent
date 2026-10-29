@@ -15,3 +15,8 @@ CLAUDE.md
 flow.md
 Implementation_plan.md
 Progress.md
+
+# test runs
+.e2e-data/
+test-results/
+playwright-report/
